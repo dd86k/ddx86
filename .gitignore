@@ -1,0 +1,24 @@
+# DUB
+.dub
+docs.json
+__dummy.html
+docs/
+/ddx86
+ddx86.so
+ddx86.dylib
+ddx86.dll
+ddx86.a
+ddx86.lib
+ddx86-test-*
+*.exe
+*.o
+*.obj
+*.lst
+dub.selections.json
+
+# vscode
+.vscode
+
+# Personal
+NOTES
+

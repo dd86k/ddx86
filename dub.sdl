@@ -1,0 +1,58 @@
+name "ddx86"
+description "x86 emulator, IBM PC VM, and DOS emulation layer"
+homepage "http://github.com/dd86k/alicedbg"
+authors "dd86k <dd@dax.moe>"
+copyright "Copyright © 2020, dd86k"
+license "BSD 3-Clause"
+version "0.0.0"
+
+buildType "profile" {
+	buildOptions "debugMode" "debugInfo" "betterC" "profile" platform="dmd"
+	buildOptions "debugMode" "debugInfo" "betterC" "profile" platform="ldc"
+	buildOptions "debugMode" "debugInfo" "profile" platform="gdc"
+}
+
+buildType "debugv" {
+	buildOptions "debugMode" "debugInfo" "betterC" platform="dmd"
+	buildOptions "debugMode" "debugInfo" "betterC" platform="ldc"
+	buildOptions "debugMode" "debugInfo" platform="gdc"
+	dflags "-v" "-vgc" "-vtls" platform="dmd"
+	dflags "-v" "--vgc" platform="ldc"
+	dflags "-v" platform="gdc"
+}
+
+buildType "debug" {
+	buildOptions "debugMode" "debugInfo" "betterC" platform="dmd"
+	buildOptions "debugMode" "debugInfo" "betterC" platform="ldc"
+	buildOptions "debugMode" "debugInfo" platform="gdc"
+}
+
+buildType "release" {
+	buildOptions "releaseMode" "optimize" "betterC" platform="dmd"
+	buildOptions "releaseMode" "optimize" "betterC" platform="ldc"
+	buildOptions "releaseMode" "optimize" platform="gdc"
+}
+
+buildType "release-nobounds" {
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" "betterC" platform="dmd"
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" "betterC" platform="ldc"
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" platform="gdc"
+}
+
+buildType "release-inline" {
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" "inline" "betterC" platform="dmd"
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" "inline" "betterC" platform="ldc"
+	buildOptions "releaseMode" "optimize" "noBoundsCheck" "inline" platform="gdc"
+}
+
+buildType "unittest" { # default to dub test
+	targetName "tests"
+	targetType "executable"
+	buildOptions "unittests"
+	dflags "-preview=intpromote" platform="dmd"
+	dflags "-preview=intpromote" platform="ldc"
+
+	# Do not inclut
+	sourcePaths "tests/"
+	excludedSourceFiles "tests/video.d"
+}

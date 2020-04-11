@@ -1,0 +1,29 @@
+┌─────────────────────────────────────┐
+│ ┌────┐ ┌────┐ ┌─┐ ┌─┐┌─────┐┌─────┐ │
+│ │┌──┐└┐│┌──┐└┐│ └─┘ ││ ┌─┐ ││ ────┤ │
+│ ││  ├ │││  ├ │├─   ─┤│ ├─┤ ││ ┌─┐ │ │
+│ │└──┘┌┘│└──┘┌┘│ ┌─┐ ││ └─┘ ││ └─┘ │ │
+│ └────┘ └────┘ └─┘ └─┘└─────┘└─────┘ │
+└─────────────────────────────────────┘
+
+Rewrite of dd86
+IBM PC Virtual Machine and DOS Emulation Layer
+
+This project aims to be a complete IBM PC emulation layer for DOS applications,
+like NTVDM and dosemu, for multiple operating systems.
+
+The reasons for the rewrite is due to the initial misunderstanding of the x86
+instruction set, bad code habits, bad code structure, and much more.
+
+"I have not failed. I've just found 10,000 ways that won't work."
+- Thomas Edison
+
+Project homes:
+	https://github.com/dd86k/ddx86
+
+┌───────────────┐
+│ DOCUMENTATION │
+└───────────────┘
+
+User: Coming soon
+Technical: Coming soon
