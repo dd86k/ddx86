@@ -67,11 +67,11 @@ int mmgu16(cpu_t *cpu, uint addr, int *val) {
  * Returns: Non-zero on error and interrupt called
  */
 int mmgu8_i(cpu_t *cpu, int* val) {
-	if (cpu.EIP.u32 >= cpu.memsize) {
+	if (cpu.EIP >= cpu.memsize) {
 		interrupt(cpu, Vector.OF);
 		return 1;
 	}
-	*val = cpu.mem[cpu.EIP.u32];
+	*val = cpu.mem[cpu.EIP];
 	++cpu.EIP.u32;
 	return 0;
 }
@@ -84,12 +84,12 @@ int mmgu8_i(cpu_t *cpu, int* val) {
  * Returns: Non-zero on error and interrupt called
  */
 int mmgu16_i(cpu_t *cpu, int* val) {
-	if (cpu.EIP.u32 >= cpu.memsize) {
+	if (cpu.EIP + 1 >= cpu.memsize) {
 		interrupt(cpu, Vector.OF);
 		return 1;
 	}
-	*val = *cast(ushort*)(cpu.mem + cpu.EIP.u32);
-	cpu.EIP.u32 += 2;
+	*val = *cast(ushort*)(cpu.mem + cpu.EIP);
+	cpu.EIP += 2;
 	return 0;
 }
 
@@ -111,6 +111,23 @@ int mmsu8(cpu_t *cpu, uint addr, int *val) {
 		return 1;
 	}
 	cpu.mem[addr] = cast(ubyte)*val;
+	return 0;
+}
+/**
+ * Set WORD at absolute address.
+ * Params:
+ * 	cpu = cpu_t structure
+ * 	addr = Memory position
+ * 	val = Data pointer
+ * Returns: Non-zero on error and interrupt called
+ */
+int mmsu16(cpu_t *cpu, uint addr, int *val) {
+	if (addr >= cpu.memsize) {
+		interrupt(cpu, Vector.OF);
+		return 1;
+	}
+	ushort* p = cast(ushort*)(cpu.mem + addr);
+	*p = cast(ushort)*val;
 	return 0;
 }
 

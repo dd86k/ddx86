@@ -55,7 +55,7 @@ enum {
 }
 
 /// General register structure to overlap with register array
-struct general_regsiter_t {
+struct general_regsiter_t { align(1):
 	union {
 		uint EAX; // @suppress(dscanner.style.undocumented_declaration)
 		ushort AX; // @suppress(dscanner.style.undocumented_declaration)
@@ -93,6 +93,12 @@ struct general_regsiter_t {
 		ushort DI; // @suppress(dscanner.style.undocumented_declaration)
 	}
 }
+
+/// Segment registers
+struct segment_registers_t { align(1):
+	ushort CS, SS, DS, ES, FS, GS; // @suppress(dscanner.style.undocumented_declaration)
+}
+
 /// Defines a register, with lower 16-bit, and 8-bit halves accesses
 struct register_t {
 	union {
@@ -119,16 +125,20 @@ struct cpu_t {
 	register_t EIP;	/// Instruction Pointer
 	register_t FLAG;	/// Flag register
 	uint[8] CR;	/// Control registers
-	ushort[6] segs;	/// Segment registers
+	union {
+		ushort[6] segs;	/// Segment registers
+		segment_registers_t sregs;	/// Provides prettier register names
+	}
 	uint[8] TR;	/// T registers
 	uint[8] DR;	/// Debug registers
 	// Internals
 	int pf66h;	/// Operand prefix
 	int pf67h;	/// Address prefix
-	int seg;	/// Segment override
+	int segov;	/// Segment override
 	int ring;	/// CPL
 	int opmode;	/// Operating mode (real, protected, etc.)
 	int cycles;	/// Reserved
+	int model;	/// CPU Model
 
 	// Compilers would whine if a local variable pointer is "used" before
 	// setting, so instead of being in the exec core, it's here
@@ -178,277 +188,280 @@ int cpuinit(cpu_t *cpu, cpu_settings_t *settings) {
 	cpu.memsize = settings.memkb;
 	cpureset(cpu);
 
+	cpu.model = CPUModel.i8086;
+	cpu.opmode = CPUMode.Real;
+
 	// Function assignment
 	cpu.opmap1[0x00] = &exec00h;
 	cpu.opmap1[0x01] = &exec01h;
-	/+OPMAP1[0x02] = &exec02;
-	OPMAP1[0x03] = &exec03;
-	OPMAP1[0x04] = &exec04;
-	OPMAP1[0x05] = &exec05;
-	OPMAP1[0x06] = &exec06;
-	OPMAP1[0x07] = &exec07;
-	OPMAP1[0x08] = &exec08;
-	OPMAP1[0x09] = &exec09;
-	OPMAP1[0x0A] = &exec0A;
-	OPMAP1[0x0B] = &exec0B;
-	OPMAP1[0x0C] = &exec0C;
-	OPMAP1[0x0D] = &exec0D;
-	OPMAP1[0x0E] = &exec0E;
-	OPMAP1[0x10] = &exec10;
-	OPMAP1[0x11] = &exec11;
-	OPMAP1[0x12] = &exec12;
-	OPMAP1[0x13] = &exec13;
-	OPMAP1[0x14] = &exec14;
-	OPMAP1[0x15] = &exec15;
-	OPMAP1[0x16] = &exec16;
-	OPMAP1[0x17] = &exec17;
-	OPMAP1[0x18] = &exec18;
-	OPMAP1[0x19] = &exec19;
-	OPMAP1[0x1A] = &exec1A;
-	OPMAP1[0x1B] = &exec1B;
-	OPMAP1[0x1C] = &exec1C;
-	OPMAP1[0x1D] = &exec1D;
-	OPMAP1[0x1E] = &exec1E;
-	OPMAP1[0x1F] = &exec1F;
-	OPMAP1[0x20] = &exec20;
-	OPMAP1[0x21] = &exec21;
-	OPMAP1[0x22] = &exec22;
-	OPMAP1[0x23] = &exec23;
-	OPMAP1[0x24] = &exec24;
-	OPMAP1[0x25] = &exec25;
-	OPMAP1[0x26] = &exec26;
-	OPMAP1[0x27] = &exec27;
-	OPMAP1[0x28] = &exec28;
-	OPMAP1[0x29] = &exec29;
-	OPMAP1[0x2A] = &exec2A;
-	OPMAP1[0x2B] = &exec2B;
-	OPMAP1[0x2C] = &exec2C;
-	OPMAP1[0x2D] = &exec2D;
-	OPMAP1[0x2E] = &exec2E;
-	OPMAP1[0x2F] = &exec2F;
-	OPMAP1[0x30] = &exec30;
-	OPMAP1[0x31] = &exec31;
-	OPMAP1[0x32] = &exec32;
-	OPMAP1[0x33] = &exec33;
-	OPMAP1[0x34] = &exec34;
-	OPMAP1[0x35] = &exec35;
-	OPMAP1[0x36] = &exec36;
-	OPMAP1[0x37] = &exec37;
-	OPMAP1[0x38] = &exec38;
-	OPMAP1[0x39] = &exec39;
-	OPMAP1[0x3A] = &exec3A;
-	OPMAP1[0x3B] = &exec3B;
-	OPMAP1[0x3C] = &exec3C;
-	OPMAP1[0x3D] = &exec3D;
-	OPMAP1[0x3E] = &exec3E;
-	OPMAP1[0x3F] = &exec3F;
-	OPMAP1[0x40] = &exec40;
-	OPMAP1[0x41] = &exec41;
-	OPMAP1[0x42] = &exec42;
-	OPMAP1[0x43] = &exec43;
-	OPMAP1[0x44] = &exec44;
-	OPMAP1[0x45] = &exec45;
-	OPMAP1[0x46] = &exec46;
-	OPMAP1[0x47] = &exec47;
-	OPMAP1[0x48] = &exec48;
-	OPMAP1[0x49] = &exec49;
-	OPMAP1[0x4A] = &exec4A;
-	OPMAP1[0x4B] = &exec4B;
-	OPMAP1[0x4C] = &exec4C;
-	OPMAP1[0x4D] = &exec4D;
-	OPMAP1[0x4E] = &exec4E;
-	OPMAP1[0x4F] = &exec4F;
-	OPMAP1[0x50] = &exec50;
-	OPMAP1[0x51] = &exec51;
-	OPMAP1[0x52] = &exec52;
-	OPMAP1[0x53] = &exec53;
-	OPMAP1[0x54] = &exec54;
-	OPMAP1[0x55] = &exec55;
-	OPMAP1[0x56] = &exec56;
-	OPMAP1[0x57] = &exec57;
-	OPMAP1[0x58] = &exec58;
-	OPMAP1[0x59] = &exec59;
-	OPMAP1[0x5A] = &exec5A;
-	OPMAP1[0x5B] = &exec5B;
-	OPMAP1[0x5C] = &exec5C;
-	OPMAP1[0x5D] = &exec5D;
-	OPMAP1[0x5E] = &exec5E;
-	OPMAP1[0x5F] = &exec5F;
-	OPMAP1[0x70] = &exec70;
-	OPMAP1[0x71] = &exec71;
-	OPMAP1[0x72] = &exec72;
-	OPMAP1[0x73] = &exec73;
-	OPMAP1[0x74] = &exec74;
-	OPMAP1[0x75] = &exec75;
-	OPMAP1[0x76] = &exec76;
-	OPMAP1[0x77] = &exec77;
-	OPMAP1[0x78] = &exec78;
-	OPMAP1[0x79] = &exec79;
-	OPMAP1[0x7A] = &exec7A;
-	OPMAP1[0x7B] = &exec7B;
-	OPMAP1[0x7C] = &exec7C;
-	OPMAP1[0x7D] = &exec7D;
-	OPMAP1[0x7E] = &exec7E;
-	OPMAP1[0x7F] = &exec7F;
-	OPMAP1[0x80] = &exec80;
-	OPMAP1[0x81] = &exec81;
-	OPMAP1[0x82] = &exec82;
-	OPMAP1[0x83] = &exec83;
-	OPMAP1[0x84] = &exec84;
-	OPMAP1[0x85] = &exec85;
-	OPMAP1[0x86] = &exec86;
-	OPMAP1[0x87] = &exec87;
-	OPMAP1[0x88] = &exec88;
-	OPMAP1[0x89] = &exec89;
-	OPMAP1[0x8A] = &exec8A;
-	OPMAP1[0x8B] = &exec8B;
-	OPMAP1[0x8C] = &exec8C;
-	OPMAP1[0x8D] = &exec8D;
-	OPMAP1[0x8E] = &exec8E;
-	OPMAP1[0x8F] = &exec8F;
-	OPMAP1[0x90] = &exec90;
-	OPMAP1[0x91] = &exec91;
-	OPMAP1[0x92] = &exec92;
-	OPMAP1[0x93] = &exec93;
-	OPMAP1[0x94] = &exec94;
-	OPMAP1[0x95] = &exec95;
-	OPMAP1[0x96] = &exec96;
-	OPMAP1[0x97] = &exec97;
-	OPMAP1[0x98] = &exec98;
-	OPMAP1[0x99] = &exec99;
-	OPMAP1[0x9A] = &exec9A;
-	OPMAP1[0x9B] = &exec9B;
-	OPMAP1[0x9C] = &exec9C;
-	OPMAP1[0x9D] = &exec9D;
-	OPMAP1[0x9E] = &exec9E;
-	OPMAP1[0x9F] = &exec9F;
-	OPMAP1[0xA0] = &execA0;
-	OPMAP1[0xA1] = &execA1;
-	OPMAP1[0xA2] = &execA2;
-	OPMAP1[0xA3] = &execA3;
-	OPMAP1[0xA4] = &execA4;
-	OPMAP1[0xA5] = &execA5;
-	OPMAP1[0xA6] = &execA6;
-	OPMAP1[0xA7] = &execA7;
-	OPMAP1[0xA8] = &execA8;
-	OPMAP1[0xA9] = &execA9;
-	OPMAP1[0xAA] = &execAA;
-	OPMAP1[0xAB] = &execAB;
-	OPMAP1[0xAC] = &execAC;
-	OPMAP1[0xAD] = &execAD;
-	OPMAP1[0xAE] = &execAE;
-	OPMAP1[0xAF] = &execAF;
-	OPMAP1[0xB0] = &execB0;
-	OPMAP1[0xB1] = &execB1;
-	OPMAP1[0xB2] = &execB2;
-	OPMAP1[0xB3] = &execB3;
-	OPMAP1[0xB4] = &execB4;
-	OPMAP1[0xB5] = &execB5;
-	OPMAP1[0xB6] = &execB6;
-	OPMAP1[0xB7] = &execB7;
-	OPMAP1[0xB8] = &execB8;
-	OPMAP1[0xB9] = &execB9;
-	OPMAP1[0xBA] = &execBA;
-	OPMAP1[0xBB] = &execBB;
-	OPMAP1[0xBC] = &execBC;
-	OPMAP1[0xBD] = &execBD;
-	OPMAP1[0xBE] = &execBE;
-	OPMAP1[0xBF] = &execBF;
-	OPMAP1[0xC2] = &execC2;
-	OPMAP1[0xC3] = &execC3;
-	OPMAP1[0xC4] = &execC4;
-	OPMAP1[0xC5] = &execC5;
-	OPMAP1[0xC6] = &execC6;
-	OPMAP1[0xC7] = &execC7;
-	OPMAP1[0xCA] = &execCA;
-	OPMAP1[0xCB] = &execCB;
-	OPMAP1[0xCC] = &execCC;
-	OPMAP1[0xCD] = &execCD;
-	OPMAP1[0xCE] = &execCE;
-	OPMAP1[0xCF] = &execCF;
-	OPMAP1[0xD0] = &execD0;
-	OPMAP1[0xD1] = &execD1;
-	OPMAP1[0xD2] = &execD2;
-	OPMAP1[0xD3] = &execD3;
-	OPMAP1[0xD4] = &execD4;
-	OPMAP1[0xD5] = &execD5;
-	OPMAP1[0xD7] = &execD7;
-	OPMAP1[0xE0] = &execE0;
-	OPMAP1[0xE1] = &execE1;
-	OPMAP1[0xE2] = &execE2;
-	OPMAP1[0xE3] = &execE3;
-	OPMAP1[0xE4] = &execE4;
-	OPMAP1[0xE5] = &execE5;
-	OPMAP1[0xE6] = &execE6;
-	OPMAP1[0xE7] = &execE7;
-	OPMAP1[0xE8] = &execE8;
-	OPMAP1[0xE9] = &execE9;
-	OPMAP1[0xEA] = &execEA;
-	OPMAP1[0xEB] = &execEB;
-	OPMAP1[0xEC] = &execEC;
-	OPMAP1[0xED] = &execED;
-	OPMAP1[0xEE] = &execEE;
-	OPMAP1[0xEF] = &execEF;
-	OPMAP1[0xF0] = &execF0;
-	OPMAP1[0xF2] = &execF2;
-	OPMAP1[0xF3] = &execF3;
-	OPMAP1[0xF4] = &execF4;
-	OPMAP1[0xF5] = &execF5;
-	OPMAP1[0xF6] = &execF6;
-	OPMAP1[0xF7] = &execF7;
-	OPMAP1[0xF8] = &execF8;
-	OPMAP1[0xF9] = &execF9;
-	OPMAP1[0xFA] = &execFA;
-	OPMAP1[0xFB] = &execFB;
-	OPMAP1[0xFC] = &execFC;
-	OPMAP1[0xFD] = &execFD;
-	OPMAP1[0xFE] = &execFE;
-	OPMAP1[0xFF] = &execFF;
-	OPMAP1[0xD6] = &execill;
+	cpu.opmap1[0x02] = &exec02h;
+	cpu.opmap1[0x03] = &exec03h;
+	cpu.opmap1[0x04] = &exec04h;
+	cpu.opmap1[0x05] = &exec05h;
+	cpu.opmap1[0x06] = &exec06h;
+	cpu.opmap1[0x07] = &exec07h;
+	/+cpu.opmap1[0x08] = &exec08h;
+	cpu.opmap1[0x09] = &exec09h;
+	cpu.opmap1[0x0A] = &exec0Ah;
+	cpu.opmap1[0x0B] = &exec0Bh;
+	cpu.opmap1[0x0C] = &exec0Ch;
+	cpu.opmap1[0x0D] = &exec0Dh;
+	cpu.opmap1[0x0E] = &exec0Eh;
+	cpu.opmap1[0x10] = &exec10h;
+	cpu.opmap1[0x11] = &exec11h;
+	cpu.opmap1[0x12] = &exec12h;
+	cpu.opmap1[0x13] = &exec13h;
+	cpu.opmap1[0x14] = &exec14h;
+	cpu.opmap1[0x15] = &exec15h;
+	cpu.opmap1[0x16] = &exec16h;
+	cpu.opmap1[0x17] = &exec17h;
+	cpu.opmap1[0x18] = &exec18h;
+	cpu.opmap1[0x19] = &exec19h;
+	cpu.opmap1[0x1A] = &exec1Ah;
+	cpu.opmap1[0x1B] = &exec1Bh;
+	cpu.opmap1[0x1C] = &exec1Ch;
+	cpu.opmap1[0x1D] = &exec1Dh;
+	cpu.opmap1[0x1E] = &exec1Eh;
+	cpu.opmap1[0x1F] = &exec1Fh;
+	cpu.opmap1[0x20] = &exec20h;
+	cpu.opmap1[0x21] = &exec21h;
+	cpu.opmap1[0x22] = &exec22h;
+	cpu.opmap1[0x23] = &exec23h;
+	cpu.opmap1[0x24] = &exec24h;
+	cpu.opmap1[0x25] = &exec25h;
+	cpu.opmap1[0x26] = &exec26h;
+	cpu.opmap1[0x27] = &exec27h;
+	cpu.opmap1[0x28] = &exec28h;
+	cpu.opmap1[0x29] = &exec29h;
+	cpu.opmap1[0x2A] = &exec2Ah;
+	cpu.opmap1[0x2B] = &exec2Bh;
+	cpu.opmap1[0x2C] = &exec2Ch;
+	cpu.opmap1[0x2D] = &exec2Dh;
+	cpu.opmap1[0x2E] = &exec2Eh;
+	cpu.opmap1[0x2F] = &exec2Fh;
+	cpu.opmap1[0x30] = &exec30h;
+	cpu.opmap1[0x31] = &exec31h;
+	cpu.opmap1[0x32] = &exec32h;
+	cpu.opmap1[0x33] = &exec33h;
+	cpu.opmap1[0x34] = &exec34h;
+	cpu.opmap1[0x35] = &exec35h;
+	cpu.opmap1[0x36] = &exec36h;
+	cpu.opmap1[0x37] = &exec37h;
+	cpu.opmap1[0x38] = &exec38h;
+	cpu.opmap1[0x39] = &exec39h;
+	cpu.opmap1[0x3A] = &exec3Ah;
+	cpu.opmap1[0x3B] = &exec3Bh;
+	cpu.opmap1[0x3C] = &exec3Ch;
+	cpu.opmap1[0x3D] = &exec3Dh;
+	cpu.opmap1[0x3E] = &exec3Eh;
+	cpu.opmap1[0x3F] = &exec3Fh;
+	cpu.opmap1[0x40] = &exec40h;
+	cpu.opmap1[0x41] = &exec41h;
+	cpu.opmap1[0x42] = &exec42h;
+	cpu.opmap1[0x43] = &exec43h;
+	cpu.opmap1[0x44] = &exec44h;
+	cpu.opmap1[0x45] = &exec45h;
+	cpu.opmap1[0x46] = &exec46h;
+	cpu.opmap1[0x47] = &exec47h;
+	cpu.opmap1[0x48] = &exec48h;
+	cpu.opmap1[0x49] = &exec49h;
+	cpu.opmap1[0x4A] = &exec4Ah;
+	cpu.opmap1[0x4B] = &exec4Bh;
+	cpu.opmap1[0x4C] = &exec4Ch;
+	cpu.opmap1[0x4D] = &exec4Dh;
+	cpu.opmap1[0x4E] = &exec4Eh;
+	cpu.opmap1[0x4F] = &exec4Fh;
+	cpu.opmap1[0x50] = &exec50h;
+	cpu.opmap1[0x51] = &exec51h;
+	cpu.opmap1[0x52] = &exec52h;
+	cpu.opmap1[0x53] = &exec53h;
+	cpu.opmap1[0x54] = &exec54h;
+	cpu.opmap1[0x55] = &exec55h;
+	cpu.opmap1[0x56] = &exec56h;
+	cpu.opmap1[0x57] = &exec57h;
+	cpu.opmap1[0x58] = &exec58h;
+	cpu.opmap1[0x59] = &exec59h;
+	cpu.opmap1[0x5A] = &exec5Ah;
+	cpu.opmap1[0x5B] = &exec5Bh;
+	cpu.opmap1[0x5C] = &exec5Ch;
+	cpu.opmap1[0x5D] = &exec5Dh;
+	cpu.opmap1[0x5E] = &exec5Eh;
+	cpu.opmap1[0x5F] = &exec5Fh;
+	cpu.opmap1[0x70] = &exec70h;
+	cpu.opmap1[0x71] = &exec71h;
+	cpu.opmap1[0x72] = &exec72h;
+	cpu.opmap1[0x73] = &exec73h;
+	cpu.opmap1[0x74] = &exec74h;
+	cpu.opmap1[0x75] = &exec75h;
+	cpu.opmap1[0x76] = &exec76h;
+	cpu.opmap1[0x77] = &exec77h;
+	cpu.opmap1[0x78] = &exec78h;
+	cpu.opmap1[0x79] = &exec79h;
+	cpu.opmap1[0x7A] = &exec7Ah;
+	cpu.opmap1[0x7B] = &exec7Bh;
+	cpu.opmap1[0x7C] = &exec7Ch;
+	cpu.opmap1[0x7D] = &exec7Dh;
+	cpu.opmap1[0x7E] = &exec7Eh;
+	cpu.opmap1[0x7F] = &exec7Fh;
+	cpu.opmap1[0x80] = &exec80h;
+	cpu.opmap1[0x81] = &exec81h;
+	cpu.opmap1[0x82] = &exec82h;
+	cpu.opmap1[0x83] = &exec83h;
+	cpu.opmap1[0x84] = &exec84h;
+	cpu.opmap1[0x85] = &exec85h;
+	cpu.opmap1[0x86] = &exec86h;
+	cpu.opmap1[0x87] = &exec87h;
+	cpu.opmap1[0x88] = &exec88h;
+	cpu.opmap1[0x89] = &exec89h;
+	cpu.opmap1[0x8A] = &exec8Ah;
+	cpu.opmap1[0x8B] = &exec8Bh;
+	cpu.opmap1[0x8C] = &exec8Ch;
+	cpu.opmap1[0x8D] = &exec8Dh;
+	cpu.opmap1[0x8E] = &exec8Eh;
+	cpu.opmap1[0x8F] = &exec8Fh;
+	cpu.opmap1[0x90] = &exec90h;
+	cpu.opmap1[0x91] = &exec91h;
+	cpu.opmap1[0x92] = &exec92h;
+	cpu.opmap1[0x93] = &exec93h;
+	cpu.opmap1[0x94] = &exec94h;
+	cpu.opmap1[0x95] = &exec95h;
+	cpu.opmap1[0x96] = &exec96h;
+	cpu.opmap1[0x97] = &exec97h;
+	cpu.opmap1[0x98] = &exec98h;
+	cpu.opmap1[0x99] = &exec99h;
+	cpu.opmap1[0x9A] = &exec9Ah;
+	cpu.opmap1[0x9B] = &exec9Bh;
+	cpu.opmap1[0x9C] = &exec9Ch;
+	cpu.opmap1[0x9D] = &exec9Dh;
+	cpu.opmap1[0x9E] = &exec9Eh;
+	cpu.opmap1[0x9F] = &exec9Fh;
+	cpu.opmap1[0xA0] = &execA0h;
+	cpu.opmap1[0xA1] = &execA1h;
+	cpu.opmap1[0xA2] = &execA2h;
+	cpu.opmap1[0xA3] = &execA3h;
+	cpu.opmap1[0xA4] = &execA4h;
+	cpu.opmap1[0xA5] = &execA5h;
+	cpu.opmap1[0xA6] = &execA6h;
+	cpu.opmap1[0xA7] = &execA7h;
+	cpu.opmap1[0xA8] = &execA8h;
+	cpu.opmap1[0xA9] = &execA9h;
+	cpu.opmap1[0xAA] = &execAAh;
+	cpu.opmap1[0xAB] = &execABh;
+	cpu.opmap1[0xAC] = &execACh;
+	cpu.opmap1[0xAD] = &execADh;
+	cpu.opmap1[0xAE] = &execAEh;
+	cpu.opmap1[0xAF] = &execAFh;
+	cpu.opmap1[0xB0] = &execB0h;
+	cpu.opmap1[0xB1] = &execB1h;
+	cpu.opmap1[0xB2] = &execB2h;
+	cpu.opmap1[0xB3] = &execB3h;
+	cpu.opmap1[0xB4] = &execB4h;
+	cpu.opmap1[0xB5] = &execB5h;
+	cpu.opmap1[0xB6] = &execB6h;
+	cpu.opmap1[0xB7] = &execB7h;
+	cpu.opmap1[0xB8] = &execB8h;
+	cpu.opmap1[0xB9] = &execB9h;
+	cpu.opmap1[0xBA] = &execBAh;
+	cpu.opmap1[0xBB] = &execBBh;
+	cpu.opmap1[0xBC] = &execBCh;
+	cpu.opmap1[0xBD] = &execBDh;
+	cpu.opmap1[0xBE] = &execBEh;
+	cpu.opmap1[0xBF] = &execBFh;
+	cpu.opmap1[0xC2] = &execC2h;
+	cpu.opmap1[0xC3] = &execC3h;
+	cpu.opmap1[0xC4] = &execC4h;
+	cpu.opmap1[0xC5] = &execC5h;
+	cpu.opmap1[0xC6] = &execC6h;
+	cpu.opmap1[0xC7] = &execC7h;
+	cpu.opmap1[0xCA] = &execCAh;
+	cpu.opmap1[0xCB] = &execCBh;
+	cpu.opmap1[0xCC] = &execCCh;
+	cpu.opmap1[0xCD] = &execCDh;
+	cpu.opmap1[0xCE] = &execCEh;
+	cpu.opmap1[0xCF] = &execCFh;
+	cpu.opmap1[0xD0] = &execD0h;
+	cpu.opmap1[0xD1] = &execD1h;
+	cpu.opmap1[0xD2] = &execD2h;
+	cpu.opmap1[0xD3] = &execD3h;
+	cpu.opmap1[0xD4] = &execD4h;
+	cpu.opmap1[0xD5] = &execD5h;
+	cpu.opmap1[0xD7] = &execD7h;
+	cpu.opmap1[0xE0] = &execE0h;
+	cpu.opmap1[0xE1] = &execE1h;
+	cpu.opmap1[0xE2] = &execE2h;
+	cpu.opmap1[0xE3] = &execE3h;
+	cpu.opmap1[0xE4] = &execE4h;
+	cpu.opmap1[0xE5] = &execE5h;
+	cpu.opmap1[0xE6] = &execE6h;
+	cpu.opmap1[0xE7] = &execE7h;
+	cpu.opmap1[0xE8] = &execE8h;
+	cpu.opmap1[0xE9] = &execE9h;
+	cpu.opmap1[0xEA] = &execEAh;
+	cpu.opmap1[0xEB] = &execEBh;
+	cpu.opmap1[0xEC] = &execECh;
+	cpu.opmap1[0xED] = &execEDh;
+	cpu.opmap1[0xEE] = &execEEh;
+	cpu.opmap1[0xEF] = &execEFh;
+	cpu.opmap1[0xF0] = &execF0h;
+	cpu.opmap1[0xF2] = &execF2h;
+	cpu.opmap1[0xF3] = &execF3h;
+	cpu.opmap1[0xF4] = &execF4h;
+	cpu.opmap1[0xF5] = &execF5h;
+	cpu.opmap1[0xF6] = &execF6h;
+	cpu.opmap1[0xF7] = &execF7h;
+	cpu.opmap1[0xF8] = &execF8h;
+	cpu.opmap1[0xF9] = &execF9h;
+	cpu.opmap1[0xFA] = &execFAh;
+	cpu.opmap1[0xFB] = &execFBh;
+	cpu.opmap1[0xFC] = &execFCh;
+	cpu.opmap1[0xFD] = &execFDh;
+	cpu.opmap1[0xFE] = &execFEh;
+	cpu.opmap1[0xFF] = &execFFh;
+	cpu.opmap1[0xD6] = &execill;
 	switch (cpu.model) {
 	case CPU_8086:
-		OPMAP1[0xC8] =
-		OPMAP1[0xC9] =
-		OPMAP1[0x0F] = // Two-byte map
-		OPMAP1[0xC0] =
-		OPMAP1[0xC1] =
-		OPMAP1[0xD8] =
-		OPMAP1[0xD9] =
-		OPMAP1[0xDA] =
-		OPMAP1[0xDB] =
-		OPMAP1[0xDC] =
-		OPMAP1[0xDD] =
-		OPMAP1[0xDE] =
-		OPMAP1[0xDF] =
-		OPMAP1[0xF1] = &execill;
+		cpu.opmap1[0xC8] =
+		cpu.opmap1[0xC9] =
+		cpu.opmap1[0x0F] = // Two-byte map
+		cpu.opmap1[0xC0] =
+		cpu.opmap1[0xC1] =
+		cpu.opmap1[0xD8] =
+		cpu.opmap1[0xD9] =
+		cpu.opmap1[0xDA] =
+		cpu.opmap1[0xDB] =
+		cpu.opmap1[0xDC] =
+		cpu.opmap1[0xDD] =
+		cpu.opmap1[0xDE] =
+		cpu.opmap1[0xDF] =
+		cpu.opmap1[0xF1] = &execill;
 		// While it is possible to map a range, range sets rely on
 		// memset32/64 which DMD linkers will not find
 		for (size_t i = 0x60; i < 0x70; ++i)
-			OPMAP1[i] = &execill;
+			cpu.opmap1[i] = &execill;
 		break;
 	case CPU_80486:
-		OPMAP1[0x60] =
-		OPMAP1[0x61] =
-		OPMAP1[0x62] =
-		OPMAP1[0x63] =
-		OPMAP1[0x64] =
-		OPMAP1[0x65] =
-		OPMAP1[0x68] =
-		OPMAP1[0x69] =
-		OPMAP1[0x6A] =
-		OPMAP1[0x6B] =
-		OPMAP1[0x6C] =
-		OPMAP1[0x6D] =
-		OPMAP1[0x6E] =
-		OPMAP1[0x6F] = &execill;
-		OPMAP1[0x66] = &exec66;
-		OPMAP1[0x67] = &exec67;
+		cpu.opmap1[0x60] =
+		cpu.opmap1[0x61] =
+		cpu.opmap1[0x62] =
+		cpu.opmap1[0x63] =
+		cpu.opmap1[0x64] =
+		cpu.opmap1[0x65] =
+		cpu.opmap1[0x68] =
+		cpu.opmap1[0x69] =
+		cpu.opmap1[0x6A] =
+		cpu.opmap1[0x6B] =
+		cpu.opmap1[0x6C] =
+		cpu.opmap1[0x6D] =
+		cpu.opmap1[0x6E] =
+		cpu.opmap1[0x6F] = &execill;
+		cpu.opmap1[0x66] = &exec66;
+		cpu.opmap1[0x67] = &exec67;
 		break;
 	default:
 	}
 
 	for (size_t i; i < 256; ++i) { // Sanity checker
-		assert(OPMAP1[i], "REAL_MAP missed spot");
+		assert(cpu.opmap1[i], "");
 	}+/
 
 	return 0;
@@ -466,7 +479,7 @@ void cpurun(cpu_t *cpu) {
 /// Params: cpu = cpu_t structure
 void cpureset(cpu_t *cpu) {
 	cpu.opmode = CPUMode.Real;
-	cpu.seg = SegReg.None;
+	cpu.segov = SegReg.None;
 
 	cpu.FLAG.u32 = 2;
 	cpu.EIP.u32 = 0;
@@ -474,21 +487,72 @@ void cpureset(cpu_t *cpu) {
 	cpu.segs[SegReg.CS] = 0xFFFF;
 }
 
+/// Push a value into memory
+void cpupush16(cpu_t *cpu, int v) {
+	import vcpu.mm;
+	uint addr = void;
+	with (CPUMode)
+	switch (cpu.opmode) {
+	case Real:
+		if (cpu.model == CPUModel.i8086) {
+			cpu.gregs.SP -= 2;
+			addr = cpuaddress(cpu.sregs.SS, cpu.gregs.SP);
+		} else {
+			addr = cpuaddress(cpu.sregs.SS, cpu.gregs.SP);
+			cpu.gregs.SP -= 2;
+		}
+		mmsu16(cpu, addr, &v);
+		break;
+	case Protected:
+	
+		break;
+	default:
+	}
+}
+void cpupush32(cpu_t *cpu, int v) {
+	
+}
+ushort cpupop16(cpu_t *cpu) {
+	import vcpu.mm;
+	int v = void;
+	uint addr = void;
+	with (CPUMode)
+	switch (cpu.opmode) {
+	case Real:
+		addr = cpuaddress(cpu.sregs.SS, cpu.gregs.SP);
+		cpu.gregs.SP += 2;
+		if (mmgu16(cpu, addr, &v))
+			return 0;
+		break;
+	case Protected:
+	
+		break;
+	default:
+	}
+	return cast(ushort)v;
+}
+/*uint cpupop32(cpu_t *cpu) {
+}*/
+
+uint cpuaddress(int s, int a) {
+	return (s << 4) | a;
+}
+
 /// Get the value of a segment register. If the segment override is set to
 /// None, the specified default segment value is returned.
 /// Params: cpu = cpu_t structure
 ushort cpuseg(cpu_t *cpu, SegReg def) {
-	if (cpu.seg == SegReg.None)
+	if (cpu.segov == SegReg.None)
 		return cpu.segs[def];
 	else
-		return cpu.segs[cpu.seg];
+		return cpu.segs[cpu.segov];
 }
 
 //
 // CPU flagging operations
 //
 
-enum {
+enum { // FLAG[31:24] is unused, so use it to put our flags in there
 	CPUFLAG_WIDTH_8B	= 0,	/// Value is BYTE (8-bit)
 	CPUFLAG_WIDTH_16B	= 0x100_0000,	/// Value is WORD (16-bit)
 	CPUFLAG_WIDTH_32B	= 0x200_0000,	/// Value is DWORD (32-bit)
@@ -505,6 +569,7 @@ enum {
 /// 	val = Value to evaluate
 /// 	flags = Defines which flag to affect with the operating width OR'd
 void cpuflag(cpu_t *cpu, int val, int flags) {
+	//TODO: PF, AF, etc.
 	if (flags & FLAG_ZF) {
 		if (val == 0)
 			cpu.FLAG |= FLAG_ZF;
@@ -523,7 +588,7 @@ void cpuflag(cpu_t *cpu, int val, int flags) {
 		return;
 	case CPUFLAG_WIDTH_16B:
 		if (flags & FLAG_CF) {
-			if (val & 0x10000) {
+			if (val & 0x1_0000) {
 				cpu.FLAG.u32 |= FLAG_CF;
 			} else {
 				cpu.FLAG.u32 &= ~FLAG_CF;
