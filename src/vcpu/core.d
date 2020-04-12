@@ -560,6 +560,8 @@ enum { // FLAG[31:24] is unused, so use it to put our flags in there
 
 	/// Affect OF, SF, ZF, AF, CF, and PF flags
 	CPUFLAG_GRP1	= FLAG_OF | FLAG_SF | FLAG_ZF | FLAG_AF | FLAG_CF | FLAG_PF,
+	/// Affect SF, ZF, and PF flags
+	CPUFLAG_GRP2	= FLAG_SF | FLAG_ZF | FLAG_PF,
 }
 
 /// Evaluate specified flags. The operation width and EFLAGS values are set in
