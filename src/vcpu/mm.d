@@ -18,6 +18,12 @@ import vcpu.interrupt;
 extern (C):
 
 //
+// Segment utilities
+//
+
+//int chkseg16(cpu_t *cpu, ushort seg, int addr)
+
+//
 // Fetch / Get
 //
 

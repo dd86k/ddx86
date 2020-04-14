@@ -144,14 +144,20 @@ struct cpu_t {
 	// setting, so instead of being in the exec core, it's here
 	union {
 		void   *src;	/// Used internally
+		byte   *src_i8;	/// Used internally
 		ubyte  *src_u8;	/// Used internally
+		short  *src_i16;	/// Used internally
 		ushort *src_u16;	/// Used internally
+		int    *src_i32;	/// Used internally
 		uint   *src_u32;	/// Used internally
 	}
 	union {
 		void   *dst;	/// Used internally
+		byte   *dst_i8;	/// Used internally
 		ubyte  *dst_u8;	/// Used internally
+		short  *dst_i16;	/// Used internally
 		ushort *dst_u16;	/// Used internally
+		int    *dst_i32;	/// Used internally
 		uint   *dst_u32;	/// Used internally
 	}
 	
@@ -200,7 +206,7 @@ int cpuinit(cpu_t *cpu, cpu_settings_t *settings) {
 	cpu.opmap1[0x05] = &exec05h;
 	cpu.opmap1[0x06] = &exec06h;
 	cpu.opmap1[0x07] = &exec07h;
-	/+cpu.opmap1[0x08] = &exec08h;
+	cpu.opmap1[0x08] = &exec08h;
 	cpu.opmap1[0x09] = &exec09h;
 	cpu.opmap1[0x0A] = &exec0Ah;
 	cpu.opmap1[0x0B] = &exec0Bh;
@@ -272,7 +278,7 @@ int cpuinit(cpu_t *cpu, cpu_settings_t *settings) {
 	cpu.opmap1[0x4E] = &exec4Eh;
 	cpu.opmap1[0x4F] = &exec4Fh;
 	cpu.opmap1[0x50] = &exec50h;
-	cpu.opmap1[0x51] = &exec51h;
+/+	cpu.opmap1[0x51] = &exec51h;
 	cpu.opmap1[0x52] = &exec52h;
 	cpu.opmap1[0x53] = &exec53h;
 	cpu.opmap1[0x54] = &exec54h;
@@ -483,12 +489,15 @@ void cpureset(cpu_t *cpu) {
 
 	cpu.FLAG.u32 = 2;
 	cpu.EIP.u32 = 0;
-	cpu.segs[SegReg.DS] = cpu.segs[SegReg.SS] = cpu.segs[SegReg.ES] = 0;
-	cpu.segs[SegReg.CS] = 0xFFFF;
+	cpu.sregs.DS = cpu.sregs.SS = cpu.sregs.ES = 0;
+	cpu.sregs.CS = 0xFFFF;
 }
 
-/// Push a value into memory
-void cpupush16(cpu_t *cpu, int v) {
+/// Push a value into stack.
+/// Params:
+/// 	cpu = cpu_t structure
+/// 	v = WORD value to push
+int cpupush16(cpu_t *cpu, int v) {
 	import vcpu.mm;
 	uint addr = void;
 	with (CPUMode)
@@ -501,39 +510,45 @@ void cpupush16(cpu_t *cpu, int v) {
 			addr = cpuaddress(cpu.sregs.SS, cpu.gregs.SP);
 			cpu.gregs.SP -= 2;
 		}
-		mmsu16(cpu, addr, &v);
-		break;
+		return mmsu16(cpu, addr, &v);
 	case Protected:
 	
 		break;
 	default:
 	}
+	return 0;
 }
-void cpupush32(cpu_t *cpu, int v) {
-	
-}
-ushort cpupop16(cpu_t *cpu) {
+
+/*void cpupush32(cpu_t *cpu, int v) {
+}*/
+
+/// Pop a value from stack.
+/// Params:
+/// 	cpu = cpu_t structure
+/// 	v = WORD value pointer to pop into
+/// Returns: Non-zero on error and interrupt called
+int cpupop16(cpu_t *cpu, int *v) {
 	import vcpu.mm;
-	int v = void;
 	uint addr = void;
 	with (CPUMode)
 	switch (cpu.opmode) {
 	case Real:
 		addr = cpuaddress(cpu.sregs.SS, cpu.gregs.SP);
 		cpu.gregs.SP += 2;
-		if (mmgu16(cpu, addr, &v))
-			return 0;
-		break;
+		return mmgu16(cpu, addr, v);
 	case Protected:
 	
 		break;
 	default:
 	}
-	return cast(ushort)v;
+	return 0;
 }
+
 /*uint cpupop32(cpu_t *cpu) {
 }*/
 
+/// Compute address with segment and address values.
+/// Returns: Segment << 4 | Address
 uint cpuaddress(int s, int a) {
 	return (s << 4) | a;
 }

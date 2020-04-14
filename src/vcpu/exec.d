@@ -26,7 +26,7 @@ void exec00h(cpu_t *cpu) { // add rm8, reg8
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
-	modrm8reg(cpu, modrm, MODRM_WIDTH_8B);
+	modrm8reg(cpu, modrm, 0);
 	int a = *cpu.dst_u8 + *cpu.src_u8;
 	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
 	*cpu.dst_u8 = cast(ubyte)a;
@@ -83,14 +83,17 @@ void exec06h(cpu_t *cpu) { // push es
 }
 
 void exec07h(cpu_t *cpu) { // pop es
-	cpu.sregs.ES = cpupop16(cpu);
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.sregs.ES = cast(ushort)v;
 }
 
 void exec08h(cpu_t *cpu) { // or rm8, reg8
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
-	modrm8reg(cpu, modrm, MODRM_WIDTH_8B);
+	modrm8reg(cpu, modrm, 0);
 	int a = *cpu.dst_u8 | *cpu.src_u8;
 	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP2);
 	cpu.FLAG &= ~(FLAG_OF | FLAG_CF);
@@ -162,14 +165,14 @@ void exec10h(cpu_t *cpu) { // adc rm8, reg8
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
-	modrm8reg(cpu, modrm, MODRM_WIDTH_8B);
+	modrm8reg(cpu, modrm, 0);
 	int a = *cpu.dst_u8 + *cpu.src_u8;
 	if (cpu.FLAG & FLAG_CF) ++a;
 	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
 	*cpu.dst_u8 = cast(ubyte)a;
 }
 
-void exec11h(cpu_t *cpu) { // adc rm8, reg8
+void exec11h(cpu_t *cpu) { // adc rm16, reg16
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_16B)) return;
@@ -225,7 +228,10 @@ void exec16h(cpu_t *cpu) { // push ss
 }
 
 void exec17h(cpu_t *cpu) { // pop ss
-	cpu.sregs.SS = cpupop16(cpu);
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.sregs.SS = cast(ushort)v;
 }
 
 void exec18h(cpu_t *cpu) { // sbb rm8, reg8
@@ -299,14 +305,17 @@ void exec1Eh(cpu_t *cpu) { // push ds
 }
 
 void exec1Fh(cpu_t *cpu) { // pop ds
-	cpu.sregs.DS = cpupop16(cpu);
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.sregs.DS = cast(ushort)v;
 }
 
 void exec20h(cpu_t *cpu) { // and rm8, reg8
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
-	modrm8reg(cpu, modrm, MODRM_WIDTH_8B);
+	modrm8reg(cpu, modrm, 0);
 	int a = *cpu.dst_u8 & *cpu.src_u8;
 	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP2);
 	cpu.FLAG &= ~(FLAG_OF | FLAG_CF);
@@ -398,7 +407,7 @@ void exec28h(cpu_t *cpu) { // sub rm8, reg8
 	int modrm = void;
 	if (mmgu8_i(cpu, &modrm)) return;
 	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
-	modrm8reg(cpu, modrm, MODRM_WIDTH_8B);
+	modrm8reg(cpu, modrm, 0);
 	int a = *cpu.dst_u8 - *cpu.src_u8;
 	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
 	*cpu.dst_u8 = cast(ubyte)a;
@@ -553,4 +562,267 @@ void exec37h(cpu_t *cpu) { // aaa
 	} else
 		cpu.FLAG &= ~(FLAG_AF | FLAG_CF);
 	cpu.gregs.AL &= 0xF;
+}
+
+void exec38h(cpu_t *cpu) { // cmp rm8, reg8
+	int modrm = void;
+	if (mmgu8_i(cpu, &modrm)) return;
+	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_8B)) return;
+	modrm8reg(cpu, modrm, 0);
+	int a = *cpu.dst_u8 - *cpu.src_i8;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
+}
+
+void exec39h(cpu_t *cpu) { // cmp rm16, reg16
+	int modrm = void;
+	if (mmgu8_i(cpu, &modrm)) return;
+	if (modrm16rm(cpu, modrm, MODRM_SET_DST | MODRM_WIDTH_16B)) return;
+	modrm16reg(cpu, modrm, 0);
+	int a = *cpu.dst_u16 - *cpu.src_i16;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_16B | CPUFLAG_GRP1);
+}
+
+void exec3Ah(cpu_t *cpu) { // cmp reg8, rm8
+	int modrm = void;
+	if (mmgu8_i(cpu, &modrm)) return;
+	if (modrm16rm(cpu, modrm, MODRM_WIDTH_8B)) return;
+	modrm8reg(cpu, modrm, MODRM_SET_DST);
+	int a = *cpu.dst_u8 + *cpu.src_i8;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
+}
+
+void exec3Bh(cpu_t *cpu) { // cmp reg16, rm16
+	int modrm = void;
+	if (mmgu8_i(cpu, &modrm)) return;
+	if (modrm16rm(cpu, modrm, MODRM_WIDTH_16B)) return;
+	modrm16reg(cpu, modrm, MODRM_SET_DST);
+	int a = *cpu.dst_u16 - *cpu.src_i16;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_16B | CPUFLAG_GRP1);
+}
+
+void exec3Ch(cpu_t *cpu) { // cmp al, imm8
+	int imm = void;
+	if (mmgu8_i(cpu, &imm)) return;
+	int a = cpu.gregs.AL - imm;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_8B | CPUFLAG_GRP1);
+}
+
+void exec3Dh(cpu_t *cpu) { // cmp ax, imm16
+	int imm = void;
+	if (mmgu16_i(cpu, &imm)) return;
+	int a = cpu.gregs.AX - imm;
+	cpuflag(cpu, a, CPUFLAG_WIDTH_16B | CPUFLAG_GRP1);
+}
+
+void exec3Eh(cpu_t *cpu) { // ds:
+	cpu.segov = SegReg.DS;
+}
+
+void exec3Fh(cpu_t *cpu) { // aas
+	if (((cpu.gregs.AL & 0xF) > 9) || cpu.FLAG & FLAG_AF) {
+		cpu.gregs.AX -= 6;
+		--cpu.gregs.AH;
+		cpu.FLAG |= FLAG_AF | FLAG_CF;
+	} else {
+		cpu.FLAG &= ~(FLAG_AF | FLAG_CF);
+	}
+	cpu.gregs.AL &= 0xF;
+}
+
+void exec40h(cpu_t *cpu) { // inc ax
+	++cpu.gregs.AX;
+}
+
+void exec41h(cpu_t *cpu) { // inc cx
+	++cpu.gregs.CX;
+}
+
+void exec42h(cpu_t *cpu) { // inc dx
+	++cpu.gregs.DX;
+}
+
+void exec43h(cpu_t *cpu) { // inc bx
+	++cpu.gregs.BX;
+}
+
+void exec44h(cpu_t *cpu) { // inc sp
+	++cpu.gregs.SP;
+}
+
+void exec45h(cpu_t *cpu) { // inc bp
+	++cpu.gregs.BP;
+}
+
+void exec46h(cpu_t *cpu) { // inc si
+	++cpu.gregs.SI;
+}
+
+void exec47h(cpu_t *cpu) { // inc di
+	++cpu.gregs.DI;
+}
+
+void exec48h(cpu_t *cpu) { // dec ax
+	--cpu.gregs.AX;
+}
+
+void exec49h(cpu_t *cpu) { // dec cx
+	--cpu.gregs.CX;
+}
+
+void exec4Ah(cpu_t *cpu) { // dec dx
+	--cpu.gregs.DX;
+}
+
+void exec4Bh(cpu_t *cpu) { // dec bx
+	--cpu.gregs.BX;
+}
+
+void exec4Ch(cpu_t *cpu) { // dec sp
+	--cpu.gregs.SP;
+}
+
+void exec4Dh(cpu_t *cpu) { // dec bp
+	--cpu.gregs.BP;
+}
+
+void exec4Eh(cpu_t *cpu) { // dec si
+	--cpu.gregs.SI;
+}
+
+void exec4Fh(cpu_t *cpu) { // dec di
+	--cpu.gregs.DI;
+}
+
+void exec50h(cpu_t *cpu) { // push ax
+	cpupush16(cpu, cpu.gregs.AX);
+}
+
+void exec51h(cpu_t *cpu) { // push cx
+	cpupush16(cpu, cpu.gregs.CX);
+}
+
+void exec52h(cpu_t *cpu) { // push dx
+	cpupush16(cpu, cpu.gregs.DX);
+}
+
+void exec53h(cpu_t *cpu) { // push bx
+	cpupush16(cpu, cpu.gregs.BX);
+}
+
+void exec54h(cpu_t *cpu) { // push sp
+	cpupush16(cpu, cpu.gregs.SP);
+}
+
+void exec55h(cpu_t *cpu) { // push bp
+	cpupush16(cpu, cpu.gregs.BP);
+}
+
+void exec56h(cpu_t *cpu) { // push si
+	cpupush16(cpu, cpu.gregs.SI);
+}
+
+void exec57h(cpu_t *cpu) { // push di
+	cpupush16(cpu, cpu.gregs.DI);
+}
+
+void exec58h(cpu_t *cpu) { // pop ax
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.AX = cast(ushort)v;
+}
+
+void exec59h(cpu_t *cpu) { // pop cx
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.CX = cast(ushort)v;
+}
+
+void exec5Ah(cpu_t *cpu) { // pop dx
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.DX = cast(ushort)v;
+}
+
+void exec5Bh(cpu_t *cpu) { // pop bx
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.DX = cast(ushort)v;
+}
+
+void exec5Ch(cpu_t *cpu) { // pop sp
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.SP = cast(ushort)v;
+}
+
+void exec5Dh(cpu_t *cpu) { // pop bp
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.BP = cast(ushort)v;
+}
+
+void exec5Eh(cpu_t *cpu) { // pop si
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.SI = cast(ushort)v;
+}
+
+void exec5Fh(cpu_t *cpu) { // pop di
+	int v = void;
+	if (cpupop16(cpu, &v))
+		return;
+	cpu.gregs.DI = cast(ushort)v;
+}
+
+void exec60h(cpu_t *cpu) { // pusha
+	int sp = cpu.gregs.SP;
+	if (cpupush16(cpu, cpu.gregs.AX)) return;
+	if (cpupush16(cpu, cpu.gregs.CX)) return;
+	if (cpupush16(cpu, cpu.gregs.DX)) return;
+	if (cpupush16(cpu, cpu.gregs.BX)) return;
+	if (cpupush16(cpu, sp)) return;
+	if (cpupush16(cpu, cpu.gregs.BP)) return;
+	if (cpupush16(cpu, cpu.gregs.SI)) return;
+	if (cpupush16(cpu, cpu.gregs.DI)) return;
+}
+
+void exec61h(cpu_t *cpu) { // popa
+	int v = void;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.DI = cast(ushort)v;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.SI = cast(ushort)v;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.BP = cast(ushort)v;
+	cpu.gregs.SP += 2;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.BX = cast(ushort)v;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.DX = cast(ushort)v;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.CX = cast(ushort)v;
+	if (cpupop16(cpu, &v)) return;
+	cpu.gregs.AX = cast(ushort)v;
+}
+
+void exec62h(cpu_t *cpu) { // bound reg16, mem16&mem16
+	int modrm = void;
+	if (mmgu8_i(cpu, &modrm)) return;
+	if ((modrm & MODRM_MOD) == MODRM_MOD_11) {
+		interrupt(cpu, Vector.UD);
+		return;
+	}
+	if (modrm16rm(cpu, modrm, 0)) return;
+	modrm16reg(cpu, modrm, MODRM_SET_DST);
+	modrm = *cpu.dst_u16; // re-use variables
+	//TODO: Check stack and data segment limits
+	if (modrm < *cpu.src_u16 || modrm > *(cpu.src_u16 + 1))
+		interrupt(cpu, Vector.BR);
 }
