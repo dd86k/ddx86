@@ -1,6 +1,6 @@
 module vcpu.interrupt;
 
-import vcpu.core;
+import vcpu.cpu;
 
 enum Vector {
 	// Intel: 0-15

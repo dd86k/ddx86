@@ -12,7 +12,7 @@
 module vcpu.mm;
 
 import consts;
-import vcpu.core;
+import vcpu.cpu;
 import vcpu.interrupt;
 
 extern (C):

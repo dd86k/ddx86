@@ -111,4 +111,37 @@ unittest {
 	exec16(&cpu, 0x07);
 	assert(cpu.sregs.ES == 0x220);
 	writeln("ok");
+
+	write("08H  or rm8, reg8\t: ");
+	imm = 0b11_000_001;
+	mmsu8(&cpu, cpu.EIP, &imm);
+	cpu.gregs.CL = 0x0F;
+	cpu.gregs.AL = 0xF0;
+	exec16(&cpu, 0x08);
+	assert(cpu.gregs.CL == 0xFF);
+	writeln("ok");
+
+	write("09H  or rm16, reg16\t: ");
+	--cpu.EIP;
+	cpu.gregs.CX = 0x0F0F;
+	cpu.gregs.AX = 0xF0F0;
+	exec16(&cpu, 0x09);
+	assert(cpu.gregs.CX == 0xFFFF);
+	writeln("ok");
+
+	write("0AH  or reg8, rm8\t: ");
+	--cpu.EIP;
+	cpu.gregs.AL = 0xF0;
+	cpu.gregs.CL = 0x0F;
+	exec16(&cpu, 0x0A);
+	assert(cpu.gregs.AL == 0xFF);
+	writeln("ok");
+
+	write("0BH  or reg16, rm16\t: ");
+	--cpu.EIP;
+	cpu.gregs.AX = 0xF00F;
+	cpu.gregs.CX = 0x0FF0;
+	exec16(&cpu, 0x0B);
+	assert(cpu.gregs.AX == 0xFFFF);
+	writeln("ok");
 }

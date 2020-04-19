@@ -1,4 +1,4 @@
-module vcpu.core;
+module vcpu.cpu;
 
 import core.stdc.stdlib : malloc;
 import vdos.def : system_t;

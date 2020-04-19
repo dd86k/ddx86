@@ -1,6 +1,6 @@
 module vcpu.exec;
 
-import vcpu.core;
+import vcpu.cpu;
 import vcpu.mm;
 import vcpu.interrupt;
 
@@ -825,4 +825,65 @@ void exec62h(cpu_t *cpu) { // bound reg16, mem16&mem16
 	//TODO: Check stack and data segment limits
 	if (modrm < *cpu.src_u16 || modrm > *(cpu.src_u16 + 1))
 		interrupt(cpu, Vector.BR);
+}
+
+void exec63h(cpu_t *cpu) { // arpl r/m16,r16
+	//TODO: arpl
+	interrupt(cpu, Vector.UD);
+}
+
+void exec64h(cpu_t *cpu) { // fs:
+	cpu.segov = SegReg.FS;
+}
+
+void exec65h(cpu_t *cpu) { // gs:
+	cpu.segov = SegReg.GS;
+}
+
+void exec66h(cpu_t *cpu) { // operand size (66H)
+	cpu.pf66h = 0x66;
+}
+
+void exec67h(cpu_t *cpu) { // address size (67H)
+	cpu.pf67h = 0x67;
+}
+
+void exec68h(cpu_t *cpu) { // push imm16
+	int imm = void;
+	if (mmgu16_i(cpu, &imm)) return;
+	cpupush16(cpu, imm);
+}
+
+void exec69h(cpu_t *cpu) { // imul reg16, rm16, imm16
+	int imm = void; /// modrm
+	if (mmgu8_i(cpu, &imm)) return;
+	if (modrm16rm(cpu, imm, MODRM_WIDTH_16B)) return;
+	modrm16reg(cpu, imm, MODRM_SET_DST);
+	if (mmgu16_i(cpu, &imm)) return;
+	imm = *cpu.src_u16 * imm;
+	if (imm > 0xFFFF || imm < -0xFFFF)
+		cpu.FLAG |= FLAG_CF | FLAG_OF;
+	else
+		cpu.FLAG &= ~(FLAG_CF | FLAG_OF);
+	*cpu.dst_u16 = cast(ushort)imm;
+}
+
+void exec6Ah(cpu_t *cpu) { // push imm8
+	int imm = void;
+	if (mmgu8_i(cpu, &imm)) return;
+	cpupush16(cpu, imm);
+}
+
+void exec6Bh(cpu_t *cpu) { // imul reg16, rm16, imm8
+	int imm = void; /// modrm
+	if (mmgu8_i(cpu, &imm)) return;
+	if (modrm16rm(cpu, imm, MODRM_WIDTH_16B)) return;
+	modrm16reg(cpu, imm, MODRM_SET_DST);
+	if (mmgu8_i(cpu, &imm)) return;
+	imm = *cpu.src_u16 * imm;
+	if (imm > 0xFFFF || imm < -0xFFFF)
+		cpu.FLAG |= FLAG_CF | FLAG_OF;
+	else
+		cpu.FLAG &= ~(FLAG_CF | FLAG_OF);
+	*cpu.dst_u16 = cast(ushort)imm;
 }
